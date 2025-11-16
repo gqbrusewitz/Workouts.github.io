@@ -99,24 +99,6 @@ export function updateSettings(partial) {
 }
 
 /* -----------------------------
-   JSON Export/Import
------------------------------- */
-export function exportJSON() {
-  return JSON.stringify(db, null, 2);
-}
-
-export function importJSON(jsonString) {
-  const parsed = JSON.parse(jsonString);
-  if (parsed.workouts && Array.isArray(parsed.workouts)) {
-    db.workouts = parsed.workouts;
-  }
-  if (parsed.settings) {
-    db.settings = { ...db.settings, ...parsed.settings };
-  }
-  saveDB();
-}
-
-/* -----------------------------
    CSV Export
 ------------------------------ */
 export function exportCSV() {

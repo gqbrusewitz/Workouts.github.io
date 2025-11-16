@@ -6,8 +6,6 @@ import {
   createWorkoutFromForm,
   calculateSummary,
   updateSettings,
-  exportJSON,
-  importJSON,
   exportCSV,
   importCSV,
   computePRs
@@ -582,8 +580,8 @@ function initSettingsTab() {
   const defaultRestInput = document.getElementById("default-rest");
   const saveSettingsBtn = document.getElementById("save-settings");
 
-  const exportJsonBtn = document.getElementById("export-json");
-  const importJsonInput = document.getElementById("import-json");
+  const exportBackupCsvBtn = document.getElementById("export-backup-csv");
+  const importBackupCsvInput = document.getElementById("import-backup-csv");
 
   unitsSelect.value = db.settings.units || "lbs";
   defaultRestInput.value = db.settings.defaultRestSeconds ?? 60;
@@ -597,16 +595,16 @@ function initSettingsTab() {
     alert("Settings saved.");
   });
 
-  exportJsonBtn.addEventListener("click", () => {
-    const data = exportJSON();
-    downloadFile(data, "workouts-backup.json", "application/json");
+  exportBackupCsvBtn.addEventListener("click", () => {
+    const csv = exportCSV();
+    downloadFile(csv, "workouts-backup.csv", "text/csv");
   });
 
-  importJsonInput.addEventListener("change", async e => {
+  importBackupCsvInput.addEventListener("change", async e => {
     const file = e.target.files[0];
     if (!file) return;
     const text = await file.text();
-    importJSON(text);
+    importCSV(text);
     updateHistoryList();
     updateAnalyticsUI();
     refreshTemplateSelectOptions();
