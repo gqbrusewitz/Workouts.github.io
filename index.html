@@ -56,6 +56,16 @@
           </div>
           <small>Use a previously saved workout or upload a CSV template (like the sample download) as a starting point.</small>
         </div>
+
+        <div class="field-row">
+          <label for="template-name">Save current workout as a reusable template</label>
+          <div class="template-save-row">
+            <input type="text" id="template-name" placeholder="Template name (e.g., Full Body A)">
+            <input type="text" id="template-description" placeholder="Short description (optional)">
+            <button id="save-template" class="btn-secondary" type="button">Save Template</button>
+          </div>
+          <small>Templates keep your exercises and notes so you can load them later without cluttering your history.</small>
+        </div>
         <div id="exercise-list"></div>
 
         <button id="add-exercise" class="btn-primary">+ Add Exercise</button>
@@ -87,6 +97,31 @@
           <button id="start-rest" class="btn-primary">Start Rest</button>
           <span id="rest-display" class="pill">Ready</span>
         </div>
+      </div>
+
+      <div class="card">
+        <h2>Exercise Library</h2>
+        <p>Grab a pre-filled move or add your own exercise for quick reuse.</p>
+
+        <div class="field-row">
+          <label for="exercise-search">Search library</label>
+          <input type="text" id="exercise-search" placeholder="Search by name, muscle group, or cue">
+        </div>
+
+        <div id="exercise-library-list" class="exercise-library"></div>
+
+        <h3>Add a custom exercise</h3>
+        <div class="library-form">
+          <input type="text" id="custom-exercise-name" placeholder="Exercise name">
+          <input type="text" id="custom-exercise-group" placeholder="Muscle group / area">
+          <select id="custom-exercise-location">
+            <option value="home">Home</option>
+            <option value="gym">Gym</option>
+          </select>
+          <input type="text" id="custom-exercise-notes" placeholder="Notes or tutorial link (optional)">
+          <button id="add-exercise-library" class="btn-secondary" type="button">Add to Library</button>
+        </div>
+        <small>Your custom exercises are stored locally and can be added to any workout.</small>
       </div>
     </section>
 

@@ -9,7 +9,11 @@ import {
   exportCSV,
   importCSV,
   getWorkoutName,
-  computePRs
+  computePRs,
+  getAllTemplates,
+  saveCustomTemplate,
+  getExerciseLibrary,
+  addExerciseToLibrary
 } from "./storage.js";
 import { initTimers, getWorkoutTimes, resetWorkoutTimes } from "./timer.js";
 import { initTheme } from "./theme.js";
@@ -70,6 +74,9 @@ function initLogTab() {
   const importTemplateBtn = document.getElementById("import-template");
   const importTemplateFileBtn = document.getElementById("import-template-file-btn");
   const templateFileInput = document.getElementById("template-file-input");
+  const templateNameInput = document.getElementById("template-name");
+  const templateDescriptionInput = document.getElementById("template-description");
+  const saveTemplateBtn = document.getElementById("save-template");
 
   const summarySets = document.getElementById("summary-sets");
   const summaryReps = document.getElementById("summary-reps");
@@ -83,6 +90,14 @@ function initLogTab() {
   const endWorkoutBtn = document.getElementById("end-workout");
   const durationDisplay = document.getElementById("workout-duration");
 
+  const exerciseSearchInput = document.getElementById("exercise-search");
+  const exerciseLibraryContainer = document.getElementById("exercise-library-list");
+  const libraryNameInput = document.getElementById("custom-exercise-name");
+  const libraryGroupInput = document.getElementById("custom-exercise-group");
+  const libraryLocationSelect = document.getElementById("custom-exercise-location");
+  const libraryNotesInput = document.getElementById("custom-exercise-notes");
+  const addLibraryExerciseBtn = document.getElementById("add-exercise-library");
+
   // default date: today
   const today = new Date().toISOString().split("T")[0];
   dateInput.value = today;
@@ -95,6 +110,7 @@ function initLogTab() {
       name: "",
       muscleGroup: "",
       location: "home", // "home" or "gym"
+      notes: "",
       sets: [
         { reps: "", weight: "", rpe: "", custom: "" }
       ]
@@ -106,17 +122,17 @@ function initLogTab() {
   if (importTemplateBtn) {
     importTemplateBtn.addEventListener("click", () => {
       if (!templateSelectEl) return;
-      const workoutId = templateSelectEl.value;
-      if (!workoutId) {
-        alert("Select a saved workout to import as a template.");
+      const selection = parseTemplateSelection(templateSelectEl.value);
+      if (!selection?.id) {
+        alert("Select a template or past workout to import.");
         return;
       }
-      const workout = db.workouts.find(w => w.id === workoutId);
-      if (!workout) {
-        alert("Workout template not found.");
+      const exercises = resolveTemplateExercises(selection);
+      if (!exercises) {
+        alert("Template not found.");
         return;
       }
-      currentExercises = cloneExercises(workout.exercises);
+      currentExercises = cloneExercises(exercises);
       renderExerciseList(exerciseList, summarySets, summaryReps, summaryVolume);
     });
   }
@@ -144,6 +160,22 @@ function initLogTab() {
       } finally {
         templateFileInput.value = "";
       }
+    });
+  }
+
+  if (saveTemplateBtn) {
+    saveTemplateBtn.addEventListener("click", () => {
+      const name = (templateNameInput?.value || "").trim();
+      if (!name) {
+        alert("Give your template a name first.");
+        return;
+      }
+      const description = templateDescriptionInput?.value || "";
+      saveCustomTemplate({ name, description, exercises: cloneExercises(currentExercises) });
+      refreshTemplateSelectOptions();
+      if (templateNameInput) templateNameInput.value = "";
+      if (templateDescriptionInput) templateDescriptionInput.value = "";
+      alert("Template saved. You can load it anytime from the picker.");
     });
   }
 
@@ -192,6 +224,25 @@ function initLogTab() {
   // initial blank list
   renderExerciseList(exerciseList, summarySets, summaryReps, summaryVolume);
   refreshTemplateSelectOptions();
+  initExerciseLibrary({
+    searchInput: exerciseSearchInput,
+    container: exerciseLibraryContainer,
+    addButton: addLibraryExerciseBtn,
+    nameInput: libraryNameInput,
+    groupInput: libraryGroupInput,
+    locationSelect: libraryLocationSelect,
+    notesInput: libraryNotesInput,
+    onAddToWorkout: exercise => {
+      currentExercises.push({
+        name: exercise.name,
+        muscleGroup: exercise.muscleGroup,
+        location: exercise.location || "home",
+        notes: exercise.notes || "",
+        sets: [{ reps: "", weight: "", rpe: "", custom: "" }]
+      });
+      renderExerciseList(exerciseList, summarySets, summaryReps, summaryVolume);
+    }
+  });
 }
 
 /* -----------------------------------
@@ -244,6 +295,23 @@ function renderExerciseList(container, summarySetsEl, summaryRepsEl, summaryVolu
 
     muscleInputRow.appendChild(label);
     muscleInputRow.appendChild(muscleInput);
+
+    const notesRow = document.createElement("div");
+    notesRow.className = "field-row";
+
+    const notesLabel = document.createElement("label");
+    notesLabel.textContent = "Notes / tutorial link (optional)";
+
+    const notesInput = document.createElement("input");
+    notesInput.type = "text";
+    notesInput.placeholder = "Add cues, setup tips, or a video URL";
+    notesInput.value = ex.notes || "";
+    notesInput.addEventListener("input", () => {
+      ex.notes = notesInput.value;
+    });
+
+    notesRow.appendChild(notesLabel);
+    notesRow.appendChild(notesInput);
 
     // Location row: home / gym
     const locRow = document.createElement("div");
@@ -347,6 +415,7 @@ function renderExerciseList(container, summarySetsEl, summaryRepsEl, summaryVolu
 
     card.appendChild(header);
     card.appendChild(muscleInputRow);
+    card.appendChild(notesRow);
     card.appendChild(locRow);
     card.appendChild(setsContainer);
     card.appendChild(addSetBtn);
@@ -369,33 +438,52 @@ function updateSummary(summarySetsEl, summaryRepsEl, summaryVolumeEl) {
 function refreshTemplateSelectOptions() {
   if (!templateSelectEl) return;
   templateSelectEl.innerHTML = "";
+  const templates = getAllTemplates();
   const hasWorkouts = db.workouts.length > 0;
+  const hasTemplates = templates.length > 0;
+  const hasOptions = hasWorkouts || hasTemplates;
+
   const placeholder = document.createElement("option");
   placeholder.value = "";
-  placeholder.textContent = hasWorkouts ? "Choose a saved workout" : "No saved workouts yet";
+  placeholder.textContent = hasOptions ? "Choose a template or workout" : "No templates or workouts yet";
   templateSelectEl.appendChild(placeholder);
-  templateSelectEl.disabled = !hasWorkouts;
+  templateSelectEl.disabled = !hasOptions;
 
-  if (!hasWorkouts) {
-    return;
+  if (hasTemplates) {
+    const templateGroup = document.createElement("optgroup");
+    templateGroup.label = "Workout templates";
+    templates.forEach(t => {
+      const opt = document.createElement("option");
+      const count = (t.exercises || []).length;
+      opt.value = `template:${t.id}`;
+      opt.textContent = `${t.name} • ${count} exercise${count === 1 ? "" : "s"}${t.description ? ` — ${t.description}` : ""}`;
+      if (t.builtIn) opt.dataset.builtin = "true";
+      templateGroup.appendChild(opt);
+    });
+    templateSelectEl.appendChild(templateGroup);
   }
 
-  const workouts = [...db.workouts].sort((a, b) => {
-    const dateA = a.date || "";
-    const dateB = b.date || "";
-    return dateB.localeCompare(dateA);
-  });
+  if (hasWorkouts) {
+    const workoutsGroup = document.createElement("optgroup");
+    workoutsGroup.label = "Past workouts";
+    const workouts = [...db.workouts].sort((a, b) => {
+      const dateA = a.date || "";
+      const dateB = b.date || "";
+      return dateB.localeCompare(dateA);
+    });
 
-  workouts.forEach(w => {
-    if (!w.id) return;
-    const opt = document.createElement("option");
-    const exerciseCount = (w.exercises || []).length;
-    const dateLabel = w.date || "Undated";
-    const workoutLabel = getWorkoutName(w);
-    opt.value = w.id;
-    opt.textContent = `${workoutLabel} — ${dateLabel} • ${exerciseCount} exercise${exerciseCount === 1 ? "" : "s"}`;
-    templateSelectEl.appendChild(opt);
-  });
+    workouts.forEach(w => {
+      if (!w.id) return;
+      const opt = document.createElement("option");
+      const exerciseCount = (w.exercises || []).length;
+      const dateLabel = w.date || "Undated";
+      const workoutLabel = getWorkoutName(w);
+      opt.value = `workout:${w.id}`;
+      opt.textContent = `${workoutLabel} — ${dateLabel} • ${exerciseCount} exercise${exerciseCount === 1 ? "" : "s"}`;
+      workoutsGroup.appendChild(opt);
+    });
+    templateSelectEl.appendChild(workoutsGroup);
+  }
 
   templateSelectEl.value = "";
 }
@@ -421,9 +509,29 @@ function cloneExercises(exercises = []) {
       name: ex.name || "",
       muscleGroup: ex.muscleGroup || "",
       location: ex.location || "home",
+      notes: ex.notes || "",
       sets
     };
   });
+}
+
+function parseTemplateSelection(value) {
+  if (!value || !value.includes(":")) return null;
+  const [type, ...rest] = value.split(":");
+  return { type, id: rest.join(":") };
+}
+
+function resolveTemplateExercises(selection) {
+  if (!selection) return null;
+  if (selection.type === "template") {
+    const template = getAllTemplates().find(t => t.id === selection.id);
+    return template ? template.exercises : null;
+  }
+  if (selection.type === "workout") {
+    const workout = db.workouts.find(w => w.id === selection.id);
+    return workout ? workout.exercises : null;
+  }
+  return null;
 }
 
 function parseExercisesFromCSV(text) {
@@ -442,6 +550,7 @@ function parseExercisesFromCSV(text) {
   const map = {
     muscleGroup: idx("muscleGroup"),
     exerciseLocation: idx("exerciseLocation"),
+    exerciseNotes: idx("exerciseNotes"),
     setIndex: idx("setIndex"),
     reps: idx("reps"),
     weight: idx("weight"),
@@ -479,6 +588,7 @@ function parseExercisesFromCSV(text) {
         name,
         muscleGroup: getValue(cols, "muscleGroup"),
         location: normalizeLocation(getValue(cols, "exerciseLocation")),
+        notes: getValue(cols, "exerciseNotes"),
         sets: []
       };
       exercises.set(name, ex);
@@ -514,6 +624,104 @@ function parseExercisesFromCSV(text) {
   return result.length ? result : null;
 }
 
+function initExerciseLibrary({ searchInput, container, addButton, nameInput, groupInput, locationSelect, notesInput, onAddToWorkout }) {
+  if (!container) return;
+
+  const render = () => {
+    const query = (searchInput?.value || "").trim().toLowerCase();
+    const library = getExerciseLibrary()
+      .filter(ex => {
+        if (!query) return true;
+        return [ex.name, ex.muscleGroup, ex.notes]
+          .some(val => (val || "").toLowerCase().includes(query));
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    container.innerHTML = "";
+    if (library.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = "No exercises match your search yet.";
+      container.appendChild(empty);
+      return;
+    }
+
+    library.forEach(ex => {
+      const item = document.createElement("div");
+      item.className = "exercise-library-item";
+
+      const header = document.createElement("div");
+      header.className = "library-item-header";
+
+      const title = document.createElement("div");
+      title.className = "library-item-title";
+      title.textContent = ex.name;
+
+      const tags = document.createElement("div");
+      tags.className = "library-tags";
+      if (ex.muscleGroup) {
+        const tag = document.createElement("span");
+        tag.className = "tag";
+        tag.textContent = ex.muscleGroup;
+        tags.appendChild(tag);
+      }
+      const locTag = document.createElement("span");
+      locTag.className = "tag subtle";
+      locTag.textContent = ex.location === "gym" ? "Gym" : "Home";
+      tags.appendChild(locTag);
+
+      header.appendChild(title);
+      header.appendChild(tags);
+
+      const notes = document.createElement("p");
+      notes.className = "library-notes";
+      notes.textContent = ex.notes || "Quick add to your workout.";
+
+      const actions = document.createElement("div");
+      actions.className = "library-actions";
+      const addBtn = document.createElement("button");
+      addBtn.className = "btn-secondary";
+      addBtn.type = "button";
+      addBtn.textContent = "Add to workout";
+      addBtn.addEventListener("click", () => {
+        onAddToWorkout?.(ex);
+      });
+      actions.appendChild(addBtn);
+
+      item.appendChild(header);
+      item.appendChild(notes);
+      item.appendChild(actions);
+      container.appendChild(item);
+    });
+  };
+
+  if (searchInput) {
+    searchInput.addEventListener("input", render);
+  }
+
+  if (addButton) {
+    addButton.addEventListener("click", () => {
+      const name = (nameInput?.value || "").trim();
+      const muscleGroup = (groupInput?.value || "").trim();
+      const location = locationSelect?.value || "home";
+      const notes = (notesInput?.value || "").trim();
+      if (!name) {
+        alert("Please enter a name for the exercise.");
+        return;
+      }
+      addExerciseToLibrary({ name, muscleGroup, location, notes });
+      if (nameInput) nameInput.value = "";
+      if (groupInput) groupInput.value = "";
+      if (locationSelect) locationSelect.value = location;
+      if (notesInput) notesInput.value = "";
+      render();
+      alert("Exercise added to your library.");
+    });
+  }
+
+  render();
+}
+
 function normalizeLocation(value) {
   const normalized = (value || "").toLowerCase();
   if (normalized === "gym" || normalized === "home") return normalized;
@@ -525,6 +733,7 @@ function buildTemplateCSV(exercises = []) {
     "exerciseName",
     "muscleGroup",
     "exerciseLocation",
+    "exerciseNotes",
     "setIndex",
     "reps",
     "weight",
@@ -541,10 +750,12 @@ function buildTemplateCSV(exercises = []) {
 
     sets.forEach((set, idx) => {
       const customValue = (set.custom ?? "").replace(/,/g, " ");
+      const noteValue = (ex.notes ?? "").replace(/,/g, " ");
       rows.push([
         safeValue(ex.name),
         safeValue(ex.muscleGroup),
         safeValue(ex.location || "home"),
+        safeValue(noteValue),
         idx + 1,
         safeValue(set.reps),
         safeValue(set.weight),
@@ -555,6 +766,12 @@ function buildTemplateCSV(exercises = []) {
   });
 
   return rows.join("\n");
+}
+
+function getSampleTemplateCSV() {
+  const templates = getAllTemplates();
+  const sampleExercises = templates.length ? templates[0].exercises : [];
+  return buildTemplateCSV(sampleExercises);
 }
 
 /* -----------------------------------
@@ -691,7 +908,8 @@ function updateHistoryList() {
           return base + rpePart + customPart;
         })
         .join("; ");
-      return `${ex.name || "Unnamed"} (${locationLabel}) — ${setText}`;
+      const notePart = ex.notes ? ` — ${ex.notes}` : "";
+      return `${ex.name || "Unnamed"} (${locationLabel}) — ${setText}${notePart}`;
     });
 
     exer.textContent = exerciseLines.join(" | ");
@@ -752,7 +970,7 @@ function initSettingsTab() {
   const downloadSampleBtn = document.getElementById("download-sample-template");
   if (downloadSampleBtn) {
     downloadSampleBtn.addEventListener("click", () => {
-      downloadFile(SAMPLE_WORKOUT_TEMPLATE_CSV, "sample-workout-template.csv", "text/csv");
+      downloadFile(getSampleTemplateCSV(), "sample-workout-template.csv", "text/csv");
     });
   }
 }
@@ -826,71 +1044,6 @@ function updateAnalyticsUI() {
     prListEl.appendChild(li);
   });
 }
-
-const SAMPLE_TEMPLATE_EXERCISES = [
-  {
-    name: "Back Squat",
-    muscleGroup: "Legs",
-    location: "gym",
-    sets: [
-      { reps: 5, weight: 135, rpe: 7, custom: "Warm up" },
-      { reps: 5, weight: 185, rpe: 8, custom: "Working" },
-      { reps: 5, weight: 185, rpe: 8, custom: "Working" }
-    ]
-  },
-  {
-    name: "Bench Press",
-    muscleGroup: "Chest",
-    location: "gym",
-    sets: [
-      { reps: 8, weight: 135, rpe: 7, custom: "" },
-      { reps: 8, weight: 145, rpe: 8, custom: "" },
-      { reps: 8, weight: 145, rpe: 8, custom: "" }
-    ]
-  },
-  {
-    name: "Bent-Over Row",
-    muscleGroup: "Back",
-    location: "gym",
-    sets: [
-      { reps: 10, weight: 95, rpe: 7, custom: "" },
-      { reps: 10, weight: 105, rpe: 8, custom: "" },
-      { reps: 10, weight: 105, rpe: 8, custom: "" }
-    ]
-  },
-  {
-    name: "Overhead Press",
-    muscleGroup: "Shoulders",
-    location: "home",
-    sets: [
-      { reps: 10, weight: 65, rpe: 7, custom: "" },
-      { reps: 10, weight: 70, rpe: 8, custom: "" },
-      { reps: 10, weight: 70, rpe: 8, custom: "" }
-    ]
-  },
-  {
-    name: "Romanian Deadlift",
-    muscleGroup: "Hamstrings",
-    location: "gym",
-    sets: [
-      { reps: 8, weight: 155, rpe: 7, custom: "" },
-      { reps: 8, weight: 175, rpe: 8, custom: "" },
-      { reps: 8, weight: 175, rpe: 8, custom: "" }
-    ]
-  },
-  {
-    name: "Plank",
-    muscleGroup: "Core",
-    location: "home",
-    sets: [
-      { reps: 60, weight: 0, rpe: "", custom: "seconds" },
-      { reps: 60, weight: 0, rpe: "", custom: "seconds" },
-      { reps: 60, weight: 0, rpe: "", custom: "seconds" }
-    ]
-  }
-];
-
-const SAMPLE_WORKOUT_TEMPLATE_CSV = buildTemplateCSV(SAMPLE_TEMPLATE_EXERCISES);
 
 /* -----------------------------------
    Download helper
