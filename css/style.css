@@ -198,6 +198,17 @@ button {
   white-space: nowrap;
 }
 
+.template-save-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.template-save-row input {
+  flex: 1;
+  min-width: 160px;
+}
+
 /* Exercise editor */
 .exercise-card {
   border-radius: 0.75rem;
@@ -232,6 +243,76 @@ button {
 
 .set-row button {
   padding-inline: 0.6rem;
+}
+
+.exercise-library {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.exercise-library-item {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg);
+}
+
+.library-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.library-item-title {
+  font-weight: 600;
+}
+
+.library-tags {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.tag {
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.tag.subtle {
+  background: transparent;
+}
+
+.library-notes {
+  margin: 0.5rem 0 0.75rem;
+  opacity: 0.85;
+}
+
+.library-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.library-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.library-form button {
+  justify-self: start;
+}
+
+.muted {
+  opacity: 0.75;
+  font-style: italic;
 }
 
 /* History */
