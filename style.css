@@ -546,6 +546,12 @@ body {
   font-size: 1rem;
 }
 
+.workout-detail {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .workout-day {
   display: inline-flex;
   align-items: center;
@@ -601,6 +607,19 @@ body {
 .workout-editor-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.helper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+}
+
+.helper-row .button {
+  padding-inline: 0.85rem;
+  font-size: 0.85rem;
 }
 
 /* Chart card */

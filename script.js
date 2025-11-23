@@ -3,8 +3,10 @@
 let compositionChart = null;
 let scenarios = [];
 let workouts = [];
+let weeklyFlow = [];
 const STORAGE_KEY = "weightWhatIfScenarios";
 const WORKOUT_STORAGE_KEY = "weightWhatIfWorkouts";
+const WEEKLY_FLOW_KEY = "weightWhatIfWeeklyFlow";
 const THEME_KEY = "ww_theme";
 const TAB_KEY = "ww_active_tab";
 
@@ -98,9 +100,9 @@ function setActiveTab(tab, buttons, panels) {
 
 /* ---------- Startup ---------- */
 
-document.addEventListener("DOMContentLoaded", () => {
-  initTheme();
-  initTabs();
+  document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
+    initTabs();
 
   // Current inputs
   ["currentWeight", "currentFat", "currentMuscle"].forEach((id) => {
@@ -131,6 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadScenariosFromStorage();
   initWorkoutPlanner();
+  loadWeeklyFlowFromStorage();
   recalc();
 });
 
@@ -567,6 +570,15 @@ function initWorkoutPlanner() {
     saveBtn.addEventListener("click", saveWorkoutFromForm);
   }
 
+  const clearWeekBtn = document.getElementById("clearWeekPlan");
+  if (clearWeekBtn) {
+    clearWeekBtn.addEventListener("click", () => {
+      weeklyFlow = [];
+      saveWeeklyFlowToStorage();
+      renderWeeklyFlow();
+    });
+  }
+
   loadWorkoutsFromStorage();
 }
 
@@ -592,26 +604,17 @@ function saveWorkoutsToStorage() {
 
 function saveWorkoutFromForm() {
   const nameInput = document.getElementById("workoutName");
-  const dayInput = document.getElementById("workoutDay");
-  const exercisesInput = document.getElementById("workoutExercises");
+  const weightInput = document.getElementById("workoutWeight");
+  const repsInput = document.getElementById("workoutReps");
   const helper = document.getElementById("workoutHelper");
 
-  if (!nameInput || !exercisesInput) return;
-
-  const exercises = parseExerciseLines(exercisesInput.value);
-
-  if (!exercises.length) {
-    if (helper) {
-      helper.textContent = "Add at least one exercise before saving.";
-    }
-    return;
-  }
+  if (!nameInput || !weightInput || !repsInput) return;
 
   const workout = {
     id: Date.now(),
     name: nameInput.value.trim() || "Custom workout",
-    day: (dayInput && dayInput.value.trim()) || "",
-    exercises,
+    weight: weightInput.value.trim(),
+    reps: repsInput.value.trim(),
   };
 
   workouts.push(workout);
@@ -619,8 +622,8 @@ function saveWorkoutFromForm() {
   renderWorkoutList();
 
   nameInput.value = "";
-  exercisesInput.value = "";
-  if (dayInput) dayInput.value = "";
+  weightInput.value = "";
+  repsInput.value = "";
   if (helper) helper.textContent = "Saved! Add another or edit below.";
 }
 
@@ -651,12 +654,13 @@ function renderWorkoutList() {
     nameEl.textContent = w.name || "Custom workout";
     titleWrap.appendChild(nameEl);
 
-    if (w.day) {
-      const badge = document.createElement("span");
-      badge.className = "workout-badge";
-      badge.textContent = w.day;
-      titleWrap.appendChild(badge);
-    }
+    const detail = document.createElement("p");
+    detail.className = "workout-detail";
+    const parts = [];
+    if (w.weight) parts.push(w.weight);
+    if (w.reps) parts.push(`${w.reps} reps`);
+    detail.textContent = parts.join(" · ") || "No details yet";
+    titleWrap.appendChild(detail);
 
     const actions = document.createElement("div");
     actions.className = "workout-actions";
@@ -665,30 +669,18 @@ function renderWorkoutList() {
     editBtn.textContent = "Edit";
     editBtn.addEventListener("click", () => openWorkoutEditor(item, w.id));
 
+    const addBtn = document.createElement("button");
+    addBtn.textContent = "Add to week";
+    addBtn.addEventListener("click", () => addWorkoutToWeek(w.id));
+
     const delBtn = document.createElement("button");
     delBtn.textContent = "✕";
     delBtn.setAttribute("aria-label", "Delete workout");
     delBtn.addEventListener("click", () => deleteWorkout(w.id));
 
-    actions.append(editBtn, delBtn);
+    actions.append(editBtn, addBtn, delBtn);
     header.append(titleWrap, actions);
-
-    const exerciseList = document.createElement("ul");
-    exerciseList.className = "workout-exercises";
-
-    if (!w.exercises || !w.exercises.length) {
-      const empty = document.createElement("li");
-      empty.textContent = "No exercises listed yet.";
-      exerciseList.appendChild(empty);
-    } else {
-      w.exercises.forEach((ex) => {
-        const li = document.createElement("li");
-        li.textContent = ex;
-        exerciseList.appendChild(li);
-      });
-    }
-
-    item.append(header, exerciseList);
+    item.append(header);
     list.appendChild(item);
   });
 }
@@ -711,23 +703,23 @@ function openWorkoutEditor(container, workoutId) {
   nameInput.value = workout.name;
   nameField.append(nameLabel, nameInput);
 
-  const dayField = document.createElement("div");
-  dayField.className = "field";
-  const dayLabel = document.createElement("label");
-  dayLabel.textContent = "Day/focus";
-  const dayInput = document.createElement("input");
-  dayInput.type = "text";
-  dayInput.value = workout.day || "";
-  dayField.append(dayLabel, dayInput);
+  const weightField = document.createElement("div");
+  weightField.className = "field";
+  const weightLabel = document.createElement("label");
+  weightLabel.textContent = "Weight / Body weight";
+  const weightInput = document.createElement("input");
+  weightInput.type = "text";
+  weightInput.value = workout.weight || "";
+  weightField.append(weightLabel, weightInput);
 
-  const exercisesField = document.createElement("div");
-  exercisesField.className = "field";
-  const exLabel = document.createElement("label");
-  exLabel.textContent = "Exercises";
-  const exArea = document.createElement("textarea");
-  exArea.rows = 4;
-  exArea.value = (workout.exercises || []).join("\n");
-  exercisesField.append(exLabel, exArea);
+  const repsField = document.createElement("div");
+  repsField.className = "field";
+  const repsLabel = document.createElement("label");
+  repsLabel.textContent = "Reps";
+  const repsInput = document.createElement("input");
+  repsInput.type = "text";
+  repsInput.value = workout.reps || "";
+  repsField.append(repsLabel, repsInput);
 
   const actionRow = document.createElement("div");
   actionRow.className = "workout-editor-actions";
@@ -738,8 +730,8 @@ function openWorkoutEditor(container, workoutId) {
   saveBtn.textContent = "Save edits";
   saveBtn.addEventListener("click", () => {
     workout.name = nameInput.value.trim() || "Custom workout";
-    workout.day = dayInput.value.trim();
-    workout.exercises = parseExerciseLines(exArea.value);
+    workout.weight = weightInput.value.trim();
+    workout.reps = repsInput.value.trim();
     saveWorkoutsToStorage();
     renderWorkoutList();
   });
@@ -753,7 +745,7 @@ function openWorkoutEditor(container, workoutId) {
   });
 
   actionRow.append(saveBtn, cancelBtn);
-  editor.append(nameField, dayField, exercisesField, actionRow);
+  editor.append(nameField, weightField, repsField, actionRow);
   container.appendChild(editor);
 }
 
@@ -761,6 +753,98 @@ function deleteWorkout(id) {
   workouts = workouts.filter((w) => w.id !== id);
   saveWorkoutsToStorage();
   renderWorkoutList();
+}
+
+function addWorkoutToWeek(id) {
+  const workout = workouts.find((w) => w.id === id);
+  if (!workout) return;
+
+  const entry = {
+    id: Date.now(),
+    name: workout.name,
+    weight: workout.weight,
+    reps: workout.reps,
+  };
+
+  weeklyFlow.push(entry);
+  saveWeeklyFlowToStorage();
+  renderWeeklyFlow();
+}
+
+function loadWeeklyFlowFromStorage() {
+  try {
+    const raw = localStorage.getItem(WEEKLY_FLOW_KEY);
+    weeklyFlow = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(weeklyFlow)) weeklyFlow = [];
+  } catch {
+    weeklyFlow = [];
+  }
+
+  renderWeeklyFlow();
+}
+
+function saveWeeklyFlowToStorage() {
+  try {
+    localStorage.setItem(WEEKLY_FLOW_KEY, JSON.stringify(weeklyFlow));
+  } catch {
+    // ignore
+  }
+}
+
+function renderWeeklyFlow() {
+  const list = document.getElementById("weekPlanList");
+  const helper = document.getElementById("weekPlanHelper");
+  if (!list || !helper) return;
+
+  list.innerHTML = "";
+
+  if (!weeklyFlow.length) {
+    helper.textContent = "Nothing planned yet—add a workout to start your week.";
+    return;
+  }
+
+  helper.textContent = "Click ✕ to remove a workout from your week.";
+
+  weeklyFlow.forEach((entry) => {
+    const item = document.createElement("li");
+    item.className = "workout-item";
+
+    const header = document.createElement("div");
+    header.className = "workout-item-header";
+
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "workout-title";
+
+    const nameEl = document.createElement("h3");
+    nameEl.className = "workout-name";
+    nameEl.textContent = entry.name || "Custom workout";
+
+    const detail = document.createElement("p");
+    detail.className = "workout-detail";
+    const parts = [];
+    if (entry.weight) parts.push(entry.weight);
+    if (entry.reps) parts.push(`${entry.reps} reps`);
+    detail.textContent = parts.join(" · ") || "No details yet";
+
+    titleWrap.append(nameEl, detail);
+
+    const actions = document.createElement("div");
+    actions.className = "workout-actions";
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "✕";
+    delBtn.setAttribute("aria-label", "Remove from week");
+    delBtn.addEventListener("click", () => {
+      weeklyFlow = weeklyFlow.filter((w) => w.id !== entry.id);
+      saveWeeklyFlowToStorage();
+      renderWeeklyFlow();
+    });
+
+    actions.append(delBtn);
+    header.append(titleWrap, actions);
+    item.append(header);
+    list.appendChild(item);
+  });
 }
 
 /* ---------- Scenarios (full state) ---------- */
