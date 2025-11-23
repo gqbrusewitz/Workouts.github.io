@@ -516,6 +516,18 @@ body {
   gap: 0.7rem;
 }
 
+.exercise-builder {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.35rem;
+}
+
+.exercise-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.55rem;
+}
+
 .workout-item {
   border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 0.8rem;
@@ -584,6 +596,19 @@ body {
   cursor: pointer;
 }
 
+.draft-exercise-list {
+  padding-left: 1.1rem;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.draft-exercise-list .empty-exercise {
+  list-style: none;
+  padding-left: 0;
+  font-style: italic;
+}
+
 .workout-exercises {
   list-style: disc;
   padding-left: 1.2rem;
@@ -615,6 +640,11 @@ body {
   justify-content: space-between;
   gap: 0.75rem;
   margin-top: 0.6rem;
+}
+
+.helper-row--wrap {
+  flex-wrap: wrap;
+  align-items: flex-start;
 }
 
 .helper-row .button {

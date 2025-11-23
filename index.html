@@ -210,16 +210,58 @@
             <input id="workoutName" type="text" placeholder="e.g. Bench press" />
           </div>
 
-          <div class="field">
-            <label for="workoutExercises">Exercises (one per line)</label>
-            <textarea
-              id="workoutExercises"
-              rows="4"
-              placeholder="e.g. Bench press — 4×8 @ 135\nChin-ups — 3×AMRAP\nSplit squats — 3×10"
-            ></textarea>
-            <small class="helper-text">
-              List multiple moves—they’ll stay attached when you add this workout to your week.
-            </small>
+          <div id="exerciseBuilder" class="exercise-builder">
+            <div class="field-grid exercise-grid">
+              <div class="field">
+                <label for="exerciseName">Exercise name</label>
+                <input
+                  id="exerciseName"
+                  class="exercise-name-input"
+                  type="text"
+                  placeholder="e.g. Bench press"
+                />
+              </div>
+              <div class="field">
+                <label for="exerciseWeight">Weight / load</label>
+                <input
+                  id="exerciseWeight"
+                  class="exercise-weight-input"
+                  type="text"
+                  placeholder="e.g. 135 lb"
+                />
+              </div>
+              <div class="field">
+                <label for="exerciseReps">Reps</label>
+                <input id="exerciseReps" class="exercise-reps-input" type="text" placeholder="e.g. 8" />
+              </div>
+              <div class="field">
+                <label for="exerciseSets">Sets</label>
+                <input id="exerciseSets" class="exercise-sets-input" type="text" placeholder="e.g. 4" />
+              </div>
+            </div>
+
+            <div class="helper-row helper-row--wrap">
+              <button id="addExerciseButton" class="button button-secondary add-exercise-button" type="button">
+                Add exercise
+              </button>
+              <p id="exerciseHelper" class="helper-text">
+                Fill in the fields and click “Add exercise” to build your list.
+              </p>
+            </div>
+
+            <ul id="exerciseDraftList" class="workout-exercises draft-exercise-list"></ul>
+
+            <div class="field">
+              <label for="workoutExercises">Exercises (auto-filled, edit anytime)</label>
+              <textarea
+                id="workoutExercises"
+                rows="4"
+                placeholder="Each exercise will appear here as you add it."
+              ></textarea>
+              <small class="helper-text">
+                We’ll keep this list in sync as you add exercises above, and you can still tweak the text manually.
+              </small>
+            </div>
           </div>
 
           <button id="saveWorkoutButton" class="button full-width-mobile" type="button">
