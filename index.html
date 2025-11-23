@@ -52,7 +52,7 @@
       <section class="card">
         <h2>What-If Goal</h2>
         <p class="card-subtitle">
-          Choose a goal type, enter a value, and we’ll calculate the rest.
+          Choose a goal type, enter a value (or two), and we’ll calculate the rest.
         </p>
 
         <div class="field">
@@ -64,22 +64,32 @@
             <option value="target_fat_pct">Target body fat (%)</option>
             <option value="target_muscle_mass">Target muscle (lbs)</option>
             <option value="target_muscle_pct">Target muscle (%)</option>
+            <option value="target_weight_fat_pct">Target weight + body fat %</option>
+            <option value="target_weight_muscle_pct">Target weight + muscle %</option>
           </select>
         </div>
 
+        <!-- Primary goal value -->
         <div class="field">
-          <label for="targetValue">Goal value</label>
+          <label id="targetValueLabel" for="targetValue">Goal value</label>
           <input id="targetValue" type="number" step="0.01" />
-          <small id="targetHelper" style="color:#9ca3af;font-size:0.75rem;">
-            Using your current weight and composition.
-          </small>
         </div>
 
-        <button id="copyCurrentToTarget" class="button button-secondary">
+        <!-- Secondary goal value (for combined goals) -->
+        <div class="field" id="targetValue2Wrapper" style="display:none;">
+          <label id="targetValue2Label" for="targetValue2">Second goal value</label>
+          <input id="targetValue2" type="number" step="0.01" />
+        </div>
+
+        <small id="targetHelper" style="color:#9ca3af;font-size:0.75rem;">
+          Using your current weight and composition.
+        </small>
+
+        <button id="copyCurrentToTarget" class="button button-secondary" style="margin-top:0.6rem;">
           Reset goal to “keep same weight”
         </button>
 
-        <div class="summary">
+        <div class="summary" style="margin-top:0.8rem;">
           <h3>Target Composition</h3>
           <ul>
             <li>Body fat: <span id="targetFatPct">0.0</span>%</li>
@@ -140,19 +150,3 @@
     <!-- Chart card spans full width on small screens -->
     <section class="card chart-card">
       <h2>Body Composition Chart</h2>
-      <p class="card-subtitle">
-        Compare current vs what-if as stacked bars (fat, muscle, bone).
-      </p>
-      <canvas id="compositionChart"></canvas>
-    </section>
-  </main>
-
-  <footer class="app-footer">
-    <p>
-      Built for “what-if” experiments – host on GitHub Pages and tweak however you like.
-    </p>
-  </footer>
-
-  <script src="script.js"></script>
-</body>
-</html>
