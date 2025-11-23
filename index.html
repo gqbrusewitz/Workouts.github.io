@@ -187,47 +187,44 @@
       <section class="cards-grid">
         <section class="card">
           <h2>Weekly Training Flow</h2>
-          <p class="card-subtitle">Keep intensity balanced with recovery.</p>
-          <ul class="week-plan">
-            <li><strong>Mon:</strong> Upper push (bench/overhead) + core</li>
-            <li><strong>Tue:</strong> Lower (squat/hinge) + mobility</li>
-            <li><strong>Wed:</strong> Conditioning (20–30 min zone 2)</li>
-            <li><strong>Thu:</strong> Upper pull (rows/pull-ups) + arms</li>
-            <li><strong>Fri:</strong> Lower power + carries</li>
-            <li><strong>Sat:</strong> Optional finisher or sport</li>
-            <li><strong>Sun:</strong> Full rest, light walk, or stretching</li>
-          </ul>
-          <p class="helper-text" style="margin-top:0.4rem;">Swap days as needed—just keep two rest/recovery slots per week.</p>
+          <p class="card-subtitle">
+            Build your week by adding saved workouts to the plan below.
+          </p>
+          <ul id="weekPlanList" class="workout-list"></ul>
+          <div class="helper-row">
+            <p class="helper-text" id="weekPlanHelper">
+              Nothing planned yet—add a workout to start your week.
+            </p>
+            <button id="clearWeekPlan" class="button button-secondary" type="button">
+              Clear week
+            </button>
+          </div>
         </section>
 
         <section class="card">
           <h2>Custom Workouts</h2>
-          <p class="card-subtitle">Save your own workouts and edit them anytime.</p>
+          <p class="card-subtitle">Log simple workouts and reuse them in your plan.</p>
 
           <div class="field">
             <label for="workoutName">Workout name</label>
-            <input id="workoutName" type="text" placeholder="e.g. Upper Push or Leg Day" />
+            <input id="workoutName" type="text" placeholder="e.g. Bench press" />
           </div>
 
           <div class="field">
-            <label for="workoutDay">Day/focus (optional)</label>
-            <input id="workoutDay" type="text" placeholder="e.g. Monday or Power" />
+            <label for="workoutWeight">Weight / Body weight</label>
+            <input id="workoutWeight" type="text" placeholder="e.g. 135 lbs or Bodyweight" />
           </div>
 
           <div class="field">
-            <label for="workoutExercises">Exercises (one per line)</label>
-            <textarea
-              id="workoutExercises"
-              rows="4"
-              placeholder="Bench press 4×6&#10;Incline DB press 3×10&#10;Rows 3×12"
-            ></textarea>
+            <label for="workoutReps">Reps</label>
+            <input id="workoutReps" type="text" placeholder="e.g. 3×10" />
           </div>
 
           <button id="saveWorkoutButton" class="button full-width-mobile" type="button">
-            Save to workout list
+            Save workout
           </button>
           <p class="helper-text" id="workoutHelper">
-            Add at least one exercise—edit/delete saved workouts below.
+            Save a workout, then add it to your weekly training flow.
           </p>
 
           <ul id="workoutList" class="workout-list"></ul>
@@ -278,15 +275,8 @@
 
         <section class="card">
           <h2>Cardio & Recovery</h2>
-          <p class="card-subtitle">Plug these in around your lifting days.</p>
-          <ul class="tag-columns">
-            <li><strong>Zone 2:</strong> 25–40 min easy bike, jog, or row.</li>
-            <li><strong>Intervals:</strong> 8–12 rounds of 30s on / 90s off.</li>
-            <li><strong>Steps:</strong> 7–10k daily as a steady baseline.</li>
-            <li><strong>Mobility:</strong> 8–10 min hips/shoulders after lifting.</li>
-            <li><strong>Sleep:</strong> 7–9 hrs; short naps if training volume rises.</li>
-            <li><strong>Hydration:</strong> 16–20 oz water with electrolytes pre-lift.</li>
-          </ul>
+          <p class="card-subtitle">Add your own cardio and recovery notes.</p>
+          <p class="helper-text">No suggestions here—customize this space for your plan.</p>
         </section>
       </section>
     </div>
