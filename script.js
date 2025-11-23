@@ -3,10 +3,8 @@
 let compositionChart = null;
 let scenarios = [];
 let workouts = [];
-let weeklyFlow = [];
 const STORAGE_KEY = "weightWhatIfScenarios";
 const WORKOUT_STORAGE_KEY = "weightWhatIfWorkouts";
-const WEEKLY_FLOW_KEY = "weightWhatIfWeeklyFlow";
 const THEME_KEY = "ww_theme";
 const TAB_KEY = "ww_active_tab";
 
@@ -132,13 +130,7 @@ function setActiveTab(tab, buttons, panels) {
     .addEventListener("click", saveCurrentScenario);
 
   loadScenariosFromStorage();
-  initWorkoutPlanner();
-  setupExerciseBuilder({
-    container: document.getElementById("exerciseBuilder"),
-    exercisesInput: document.getElementById("workoutExercises"),
-    helperEl: document.getElementById("exerciseHelper"),
-  });
-  loadWeeklyFlowFromStorage();
+  initWorkoutBuilder();
   recalc();
 });
 
@@ -594,72 +586,21 @@ function updateChart(currentComp, targetComp) {
   }
 }
 
-/* ---------- Custom workouts ---------- */
+/* ---------- Workouts (rebuilt) ---------- */
 
-function initWorkoutPlanner() {
-  const saveBtn = document.getElementById("saveWorkoutButton");
-  if (saveBtn) {
-    saveBtn.addEventListener("click", saveWorkoutFromForm);
-  }
-
-  const clearWeekBtn = document.getElementById("clearWeekPlan");
-  if (clearWeekBtn) {
-    clearWeekBtn.addEventListener("click", () => {
-      weeklyFlow = [];
-      saveWeeklyFlowToStorage();
-      renderWeeklyFlow();
-    });
-  }
-
+function initWorkoutBuilder() {
   loadWorkoutsFromStorage();
-}
 
-function setupExerciseBuilder({ container, exercisesInput, helperEl }) {
-  if (!container || !exercisesInput) return;
+  const addExerciseBtn = document.getElementById("addExerciseRow");
+  if (addExerciseBtn) {
+    addExerciseBtn.addEventListener("click", () => addExerciseRow());
+  }
 
-  const nameInput = container.querySelector(".exercise-name-input");
-  const weightInput = container.querySelector(".exercise-weight-input");
-  const repsInput = container.querySelector(".exercise-reps-input");
-  const setsInput = container.querySelector(".exercise-sets-input");
-  const addBtn = container.querySelector(".add-exercise-button");
-  const listEl = container.querySelector(".draft-exercise-list");
+  const saveBtn = document.getElementById("saveWorkoutButton");
+  if (saveBtn) saveBtn.addEventListener("click", saveWorkoutFromForm);
 
-  if (!nameInput || !weightInput || !repsInput || !setsInput || !addBtn || !listEl) return;
-
-  const updateList = () => {
-    const lines = parseExerciseLines(exercisesInput.value);
-    renderExerciseDraftList(lines, listEl);
-  };
-
-  addBtn.addEventListener("click", () => {
-    const name = nameInput.value.trim();
-    const weight = weightInput.value.trim();
-    const reps = repsInput.value.trim();
-    const sets = setsInput.value.trim();
-
-    if (!name) {
-      if (helperEl) helperEl.textContent = "Add a name to save this exercise.";
-      nameInput.focus();
-      return;
-    }
-
-    const line = formatExerciseLine({ name, weight, reps, sets });
-    const lines = parseExerciseLines(exercisesInput.value);
-    lines.push(line);
-    exercisesInput.value = lines.join("\n");
-    updateList();
-
-    [nameInput, weightInput, repsInput, setsInput].forEach((input) => {
-      input.value = "";
-    });
-
-    if (helperEl)
-      helperEl.textContent = "Added! Keep stacking exercises, or edit the list directly.";
-    nameInput.focus();
-  });
-
-  exercisesInput.addEventListener("input", updateList);
-  updateList();
+  renderExerciseRows();
+  renderWorkoutList();
 }
 
 function loadWorkoutsFromStorage() {
@@ -670,8 +611,6 @@ function loadWorkoutsFromStorage() {
   } catch {
     workouts = [];
   }
-
-  renderWorkoutList();
 }
 
 function saveWorkoutsToStorage() {
@@ -682,17 +621,93 @@ function saveWorkoutsToStorage() {
   }
 }
 
+function renderExerciseRows() {
+  const container = document.getElementById("exerciseRows");
+  if (!container) return;
+
+  container.innerHTML = "";
+  addExerciseRow();
+}
+
+function addExerciseRow(data = {}) {
+  const container = document.getElementById("exerciseRows");
+  if (!container) return;
+
+  const row = document.createElement("div");
+  row.className = "exercise-row";
+
+  row.innerHTML = `
+    <div class="field">
+      <label>Exercise</label>
+      <input type="text" class="exercise-name" placeholder="e.g. Bench press" value="${data.name || ""}" />
+    </div>
+    <div class="field">
+      <label>Weight / load</label>
+      <input type="text" class="exercise-weight" placeholder="e.g. 135 lb" value="${data.weight || ""}" />
+    </div>
+    <div class="field">
+      <label>Reps</label>
+      <input type="number" class="exercise-reps" inputmode="numeric" min="0" placeholder="e.g. 8" value="${data.reps || ""}" />
+    </div>
+    <div class="field">
+      <label>Sets</label>
+      <input type="number" class="exercise-sets" inputmode="numeric" min="0" placeholder="e.g. 4" value="${data.sets || ""}" />
+    </div>
+  `;
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "button button-ghost remove-row";
+  removeBtn.textContent = "Remove";
+  removeBtn.addEventListener("click", () => {
+    row.remove();
+    ensureAtLeastOneRow();
+  });
+
+  row.appendChild(removeBtn);
+  container.appendChild(row);
+}
+
+function ensureAtLeastOneRow() {
+  const container = document.getElementById("exerciseRows");
+  if (!container) return;
+  if (!container.querySelector(".exercise-row")) {
+    addExerciseRow();
+  }
+}
+
+function collectExercisesFromForm() {
+  const container = document.getElementById("exerciseRows");
+  if (!container) return [];
+
+  return Array.from(container.querySelectorAll(".exercise-row"))
+    .map((row) => {
+      const name = row.querySelector(".exercise-name")?.value.trim() || "";
+      const weight = row.querySelector(".exercise-weight")?.value.trim() || "";
+      const reps = row.querySelector(".exercise-reps")?.value.trim() || "";
+      const sets = row.querySelector(".exercise-sets")?.value.trim() || "";
+      return { name, weight, reps, sets };
+    })
+    .filter((ex) => ex.name);
+}
+
 function saveWorkoutFromForm() {
   const nameInput = document.getElementById("workoutName");
-  const exercisesInput = document.getElementById("workoutExercises");
   const helper = document.getElementById("workoutHelper");
 
-  if (!nameInput || !exercisesInput) return;
+  if (!nameInput) return;
+
+  const exercises = collectExercisesFromForm();
+  if (!exercises.length) {
+    if (helper)
+      helper.textContent = "Add at least one exercise with a name to save.";
+    return;
+  }
 
   const workout = {
     id: Date.now(),
-    name: nameInput.value.trim() || "Custom workout",
-    exercises: parseExerciseLines(exercisesInput.value),
+    name: nameInput.value.trim() || "Untitled workout",
+    exercises,
   };
 
   workouts.push(workout);
@@ -700,9 +715,9 @@ function saveWorkoutFromForm() {
   renderWorkoutList();
 
   nameInput.value = "";
-  exercisesInput.value = "";
+  renderExerciseRows();
   if (helper)
-    helper.textContent = "Saved! Add another or edit below with all exercises.";
+    helper.textContent = "Saved! Build another session whenever you’re ready.";
 }
 
 function renderWorkoutList() {
@@ -713,11 +728,11 @@ function renderWorkoutList() {
 
   if (!workouts.length) {
     list.innerHTML =
-      '<li style="color:#9ca3af;font-size:0.85rem;">No custom workouts yet. Add your own sessions to reuse them later.</li>';
+      '<li class="empty-note">No workouts yet. Add exercises, then save your session.</li>';
     return;
   }
 
-  workouts.forEach((w) => {
+  workouts.forEach((workout) => {
     const item = document.createElement("li");
     item.className = "workout-item";
 
@@ -729,21 +744,20 @@ function renderWorkoutList() {
 
     const nameEl = document.createElement("h3");
     nameEl.className = "workout-name";
-    nameEl.textContent = w.name || "Custom workout";
+    nameEl.textContent = workout.name;
     titleWrap.appendChild(nameEl);
 
     const detail = document.createElement("p");
     detail.className = "workout-detail";
-    const exercises = getWorkoutExercises(w);
-    detail.textContent = summarizeExercises(exercises);
+    detail.textContent = summarizeWorkout(extractExerciseText(workout.exercises));
     titleWrap.appendChild(detail);
 
-    if (exercises.length) {
+    if (workout.exercises?.length) {
       const exerciseList = document.createElement("ul");
       exerciseList.className = "workout-exercises";
-      exercises.forEach((ex) => {
+      workout.exercises.forEach((ex) => {
         const li = document.createElement("li");
-        li.textContent = ex;
+        li.textContent = formatExerciseDisplay(ex);
         exerciseList.appendChild(li);
       });
       titleWrap.appendChild(exerciseList);
@@ -752,276 +766,39 @@ function renderWorkoutList() {
     const actions = document.createElement("div");
     actions.className = "workout-actions";
 
-    const editBtn = document.createElement("button");
-    editBtn.textContent = "Edit";
-    editBtn.addEventListener("click", () => openWorkoutEditor(item, w.id));
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", () => {
+      workouts = workouts.filter((w) => w.id !== workout.id);
+      saveWorkoutsToStorage();
+      renderWorkoutList();
+    });
 
-    const addBtn = document.createElement("button");
-    addBtn.textContent = "Add to week";
-    addBtn.addEventListener("click", () => addWorkoutToWeek(w.id));
-
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "✕";
-    delBtn.setAttribute("aria-label", "Delete workout");
-    delBtn.addEventListener("click", () => deleteWorkout(w.id));
-
-    actions.append(editBtn, addBtn, delBtn);
+    actions.append(deleteBtn);
     header.append(titleWrap, actions);
     item.append(header);
     list.appendChild(item);
   });
 }
 
-function getWorkoutExercises(workout) {
-  if (!workout) return [];
-
-  if (Array.isArray(workout.exercises) && workout.exercises.length) {
-    return workout.exercises.filter(Boolean);
-  }
-
-  const fallback = [];
-  const parts = [];
-  if (workout.weight) parts.push(workout.weight);
-  if (workout.reps) parts.push(`${workout.reps} reps`);
-  if (parts.length) {
-    fallback.push(`${workout.name || "Exercise"} — ${parts.join(" · ")}`);
-  }
-
-  return fallback;
+function extractExerciseText(exercises = []) {
+  return exercises.map((ex) => formatExerciseDisplay(ex));
 }
 
-function summarizeExercises(exercises) {
+function summarizeWorkout(exercises) {
   if (!exercises.length) return "No exercises yet";
   if (exercises.length === 1) return exercises[0];
   return `${exercises[0]} + ${exercises.length - 1} more`;
 }
 
-function openWorkoutEditor(container, workoutId) {
-  if (container.querySelector(".workout-editor")) return;
-
-  const workout = workouts.find((w) => w.id === workoutId);
-  if (!workout) return;
-
-  const editor = document.createElement("div");
-  editor.className = "workout-editor";
-
-  const nameField = document.createElement("div");
-  nameField.className = "field";
-  const nameLabel = document.createElement("label");
-  nameLabel.textContent = "Workout name";
-  const nameInput = document.createElement("input");
-  nameInput.type = "text";
-  nameInput.value = workout.name;
-  nameField.append(nameLabel, nameInput);
-
-  const builder = document.createElement("div");
-  builder.className = "exercise-builder";
-
-  const grid = document.createElement("div");
-  grid.className = "field-grid exercise-grid";
-
-  const exNameField = document.createElement("div");
-  exNameField.className = "field";
-  const exNameLabel = document.createElement("label");
-  exNameLabel.textContent = "Exercise name";
-  const exNameInput = document.createElement("input");
-  exNameInput.type = "text";
-  exNameInput.placeholder = "e.g. Rows";
-  exNameInput.className = "exercise-name-input";
-  exNameField.append(exNameLabel, exNameInput);
-
-  const exWeightField = document.createElement("div");
-  exWeightField.className = "field";
-  const exWeightLabel = document.createElement("label");
-  exWeightLabel.textContent = "Weight / load";
-  const exWeightInput = document.createElement("input");
-  exWeightInput.type = "text";
-  exWeightInput.placeholder = "e.g. 50 lb";
-  exWeightInput.className = "exercise-weight-input";
-  exWeightField.append(exWeightLabel, exWeightInput);
-
-  const exRepsField = document.createElement("div");
-  exRepsField.className = "field";
-  const exRepsLabel = document.createElement("label");
-  exRepsLabel.textContent = "Reps";
-  const exRepsInput = document.createElement("input");
-  exRepsInput.type = "text";
-  exRepsInput.placeholder = "e.g. 10";
-  exRepsInput.className = "exercise-reps-input";
-  exRepsField.append(exRepsLabel, exRepsInput);
-
-  const exSetsField = document.createElement("div");
-  exSetsField.className = "field";
-  const exSetsLabel = document.createElement("label");
-  exSetsLabel.textContent = "Sets";
-  const exSetsInput = document.createElement("input");
-  exSetsInput.type = "text";
-  exSetsInput.placeholder = "e.g. 3";
-  exSetsInput.className = "exercise-sets-input";
-  exSetsField.append(exSetsLabel, exSetsInput);
-
-  grid.append(exNameField, exWeightField, exRepsField, exSetsField);
-
-  const helperRow = document.createElement("div");
-  helperRow.className = "helper-row helper-row--wrap";
-  const addBtn = document.createElement("button");
-  addBtn.type = "button";
-  addBtn.className = "button button-secondary add-exercise-button";
-  addBtn.textContent = "Add exercise";
-  const helper = document.createElement("p");
-  helper.className = "helper-text";
-  helper.textContent = "Capture each move below, then edit the list if needed.";
-  helperRow.append(addBtn, helper);
-
-  const draftList = document.createElement("ul");
-  draftList.className = "workout-exercises draft-exercise-list";
-
-  const exercisesField = document.createElement("div");
-  exercisesField.className = "field";
-  const exercisesLabel = document.createElement("label");
-  exercisesLabel.textContent = "Exercises (auto-filled, edit anytime)";
-  const exercisesInput = document.createElement("textarea");
-  exercisesInput.rows = 4;
-  exercisesInput.placeholder = "Each exercise will appear here as you add it.";
-  exercisesInput.value = getWorkoutExercises(workout).join("\n");
-  exercisesField.append(exercisesLabel, exercisesInput);
-
-  builder.append(grid, helperRow, draftList, exercisesField);
-
-  const actionRow = document.createElement("div");
-  actionRow.className = "workout-editor-actions";
-
-  const saveBtn = document.createElement("button");
-  saveBtn.type = "button";
-  saveBtn.className = "button";
-  saveBtn.textContent = "Save edits";
-  saveBtn.addEventListener("click", () => {
-    workout.name = nameInput.value.trim() || "Custom workout";
-    workout.exercises = parseExerciseLines(exercisesInput.value);
-    saveWorkoutsToStorage();
-    renderWorkoutList();
-  });
-
-  const cancelBtn = document.createElement("button");
-  cancelBtn.type = "button";
-  cancelBtn.className = "button button-secondary";
-  cancelBtn.textContent = "Cancel";
-  cancelBtn.addEventListener("click", () => {
-    editor.remove();
-  });
-
-  actionRow.append(saveBtn, cancelBtn);
-  editor.append(nameField, builder, actionRow);
-  setupExerciseBuilder({ container: builder, exercisesInput, helperEl: helper });
-  container.appendChild(editor);
+function formatExerciseDisplay(ex) {
+  const parts = [];
+  if (ex.sets) parts.push(`${ex.sets} set${ex.sets === "1" ? "" : "s"}`);
+  if (ex.reps) parts.push(`${ex.reps} reps`);
+  if (ex.weight) parts.push(`@ ${ex.weight}`);
+  const suffix = parts.length ? ` — ${parts.join(" · ")}` : "";
+  return `${ex.name}${suffix}`;
 }
-
-function deleteWorkout(id) {
-  workouts = workouts.filter((w) => w.id !== id);
-  saveWorkoutsToStorage();
-  renderWorkoutList();
-}
-
-function addWorkoutToWeek(id) {
-  const workout = workouts.find((w) => w.id === id);
-  if (!workout) return;
-
-  const entry = {
-    id: Date.now(),
-    name: workout.name,
-    exercises: getWorkoutExercises(workout),
-  };
-
-  weeklyFlow.push(entry);
-  saveWeeklyFlowToStorage();
-  renderWeeklyFlow();
-}
-
-function loadWeeklyFlowFromStorage() {
-  try {
-    const raw = localStorage.getItem(WEEKLY_FLOW_KEY);
-    weeklyFlow = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(weeklyFlow)) weeklyFlow = [];
-  } catch {
-    weeklyFlow = [];
-  }
-
-  renderWeeklyFlow();
-}
-
-function saveWeeklyFlowToStorage() {
-  try {
-    localStorage.setItem(WEEKLY_FLOW_KEY, JSON.stringify(weeklyFlow));
-  } catch {
-    // ignore
-  }
-}
-
-function renderWeeklyFlow() {
-  const list = document.getElementById("weekPlanList");
-  const helper = document.getElementById("weekPlanHelper");
-  if (!list || !helper) return;
-
-  list.innerHTML = "";
-
-  if (!weeklyFlow.length) {
-    helper.textContent = "Nothing planned yet—add a workout to start your week.";
-    return;
-  }
-
-  helper.textContent = "Click ✕ to remove a workout from your week.";
-
-  weeklyFlow.forEach((entry) => {
-    const item = document.createElement("li");
-    item.className = "workout-item";
-
-    const header = document.createElement("div");
-    header.className = "workout-item-header";
-
-    const titleWrap = document.createElement("div");
-    titleWrap.className = "workout-title";
-
-    const nameEl = document.createElement("h3");
-    nameEl.className = "workout-name";
-    nameEl.textContent = entry.name || "Custom workout";
-
-    const detail = document.createElement("p");
-    detail.className = "workout-detail";
-    const exercises = getWorkoutExercises(entry);
-    detail.textContent = summarizeExercises(exercises);
-
-    titleWrap.append(nameEl, detail);
-
-    if (exercises.length) {
-      const exerciseList = document.createElement("ul");
-      exerciseList.className = "workout-exercises";
-      exercises.forEach((ex) => {
-        const li = document.createElement("li");
-        li.textContent = ex;
-        exerciseList.appendChild(li);
-      });
-      titleWrap.appendChild(exerciseList);
-    }
-
-    const actions = document.createElement("div");
-    actions.className = "workout-actions";
-
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "✕";
-    delBtn.setAttribute("aria-label", "Remove from week");
-    delBtn.addEventListener("click", () => {
-      weeklyFlow = weeklyFlow.filter((w) => w.id !== entry.id);
-      saveWeeklyFlowToStorage();
-      renderWeeklyFlow();
-    });
-
-    actions.append(delBtn);
-    header.append(titleWrap, actions);
-    item.append(header);
-    list.appendChild(item);
-  });
-}
-
 /* ---------- Scenarios (full state) ---------- */
 
 function loadScenariosFromStorage() {
