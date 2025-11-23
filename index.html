@@ -201,6 +201,39 @@
         </section>
 
         <section class="card">
+          <h2>Custom Workouts</h2>
+          <p class="card-subtitle">Save your own workouts and edit them anytime.</p>
+
+          <div class="field">
+            <label for="workoutName">Workout name</label>
+            <input id="workoutName" type="text" placeholder="e.g. Upper Push or Leg Day" />
+          </div>
+
+          <div class="field">
+            <label for="workoutDay">Day/focus (optional)</label>
+            <input id="workoutDay" type="text" placeholder="e.g. Monday or Power" />
+          </div>
+
+          <div class="field">
+            <label for="workoutExercises">Exercises (one per line)</label>
+            <textarea
+              id="workoutExercises"
+              rows="4"
+              placeholder="Bench press 4×6&#10;Incline DB press 3×10&#10;Rows 3×12"
+            ></textarea>
+          </div>
+
+          <button id="saveWorkoutButton" class="button full-width-mobile" type="button">
+            Save to workout list
+          </button>
+          <p class="helper-text" id="workoutHelper">
+            Add at least one exercise—edit/delete saved workouts below.
+          </p>
+
+          <ul id="workoutList" class="workout-list"></ul>
+        </section>
+
+        <section class="card">
           <h2>Session Builder</h2>
           <p class="card-subtitle">Pick one block from each row to craft today’s lift.</p>
           <div class="session-grid">

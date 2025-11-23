@@ -2,7 +2,9 @@
 
 let compositionChart = null;
 let scenarios = [];
+let workouts = [];
 const STORAGE_KEY = "weightWhatIfScenarios";
+const WORKOUT_STORAGE_KEY = "weightWhatIfWorkouts";
 const THEME_KEY = "ww_theme";
 const TAB_KEY = "ww_active_tab";
 
@@ -128,6 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
     .addEventListener("click", saveCurrentScenario);
 
   loadScenariosFromStorage();
+  initWorkoutPlanner();
   recalc();
 });
 
@@ -140,6 +143,13 @@ function getNumber(id) {
 
 function setText(id, text) {
   document.getElementById(id).textContent = text;
+}
+
+function parseExerciseLines(raw) {
+  return raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 /* ---------- Goal handling ---------- */
@@ -547,6 +557,210 @@ function updateChart(currentComp, targetComp) {
       options,
     });
   }
+}
+
+/* ---------- Custom workouts ---------- */
+
+function initWorkoutPlanner() {
+  const saveBtn = document.getElementById("saveWorkoutButton");
+  if (saveBtn) {
+    saveBtn.addEventListener("click", saveWorkoutFromForm);
+  }
+
+  loadWorkoutsFromStorage();
+}
+
+function loadWorkoutsFromStorage() {
+  try {
+    const raw = localStorage.getItem(WORKOUT_STORAGE_KEY);
+    workouts = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(workouts)) workouts = [];
+  } catch {
+    workouts = [];
+  }
+
+  renderWorkoutList();
+}
+
+function saveWorkoutsToStorage() {
+  try {
+    localStorage.setItem(WORKOUT_STORAGE_KEY, JSON.stringify(workouts));
+  } catch {
+    // ignore
+  }
+}
+
+function saveWorkoutFromForm() {
+  const nameInput = document.getElementById("workoutName");
+  const dayInput = document.getElementById("workoutDay");
+  const exercisesInput = document.getElementById("workoutExercises");
+  const helper = document.getElementById("workoutHelper");
+
+  if (!nameInput || !exercisesInput) return;
+
+  const exercises = parseExerciseLines(exercisesInput.value);
+
+  if (!exercises.length) {
+    if (helper) {
+      helper.textContent = "Add at least one exercise before saving.";
+    }
+    return;
+  }
+
+  const workout = {
+    id: Date.now(),
+    name: nameInput.value.trim() || "Custom workout",
+    day: (dayInput && dayInput.value.trim()) || "",
+    exercises,
+  };
+
+  workouts.push(workout);
+  saveWorkoutsToStorage();
+  renderWorkoutList();
+
+  nameInput.value = "";
+  exercisesInput.value = "";
+  if (dayInput) dayInput.value = "";
+  if (helper) helper.textContent = "Saved! Add another or edit below.";
+}
+
+function renderWorkoutList() {
+  const list = document.getElementById("workoutList");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  if (!workouts.length) {
+    list.innerHTML =
+      '<li style="color:#9ca3af;font-size:0.85rem;">No custom workouts yet. Add your own sessions to reuse them later.</li>';
+    return;
+  }
+
+  workouts.forEach((w) => {
+    const item = document.createElement("li");
+    item.className = "workout-item";
+
+    const header = document.createElement("div");
+    header.className = "workout-item-header";
+
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "workout-title";
+
+    const nameEl = document.createElement("h3");
+    nameEl.className = "workout-name";
+    nameEl.textContent = w.name || "Custom workout";
+    titleWrap.appendChild(nameEl);
+
+    if (w.day) {
+      const badge = document.createElement("span");
+      badge.className = "workout-badge";
+      badge.textContent = w.day;
+      titleWrap.appendChild(badge);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "workout-actions";
+
+    const editBtn = document.createElement("button");
+    editBtn.textContent = "Edit";
+    editBtn.addEventListener("click", () => openWorkoutEditor(item, w.id));
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "✕";
+    delBtn.setAttribute("aria-label", "Delete workout");
+    delBtn.addEventListener("click", () => deleteWorkout(w.id));
+
+    actions.append(editBtn, delBtn);
+    header.append(titleWrap, actions);
+
+    const exerciseList = document.createElement("ul");
+    exerciseList.className = "workout-exercises";
+
+    if (!w.exercises || !w.exercises.length) {
+      const empty = document.createElement("li");
+      empty.textContent = "No exercises listed yet.";
+      exerciseList.appendChild(empty);
+    } else {
+      w.exercises.forEach((ex) => {
+        const li = document.createElement("li");
+        li.textContent = ex;
+        exerciseList.appendChild(li);
+      });
+    }
+
+    item.append(header, exerciseList);
+    list.appendChild(item);
+  });
+}
+
+function openWorkoutEditor(container, workoutId) {
+  if (container.querySelector(".workout-editor")) return;
+
+  const workout = workouts.find((w) => w.id === workoutId);
+  if (!workout) return;
+
+  const editor = document.createElement("div");
+  editor.className = "workout-editor";
+
+  const nameField = document.createElement("div");
+  nameField.className = "field";
+  const nameLabel = document.createElement("label");
+  nameLabel.textContent = "Workout name";
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.value = workout.name;
+  nameField.append(nameLabel, nameInput);
+
+  const dayField = document.createElement("div");
+  dayField.className = "field";
+  const dayLabel = document.createElement("label");
+  dayLabel.textContent = "Day/focus";
+  const dayInput = document.createElement("input");
+  dayInput.type = "text";
+  dayInput.value = workout.day || "";
+  dayField.append(dayLabel, dayInput);
+
+  const exercisesField = document.createElement("div");
+  exercisesField.className = "field";
+  const exLabel = document.createElement("label");
+  exLabel.textContent = "Exercises";
+  const exArea = document.createElement("textarea");
+  exArea.rows = 4;
+  exArea.value = (workout.exercises || []).join("\n");
+  exercisesField.append(exLabel, exArea);
+
+  const actionRow = document.createElement("div");
+  actionRow.className = "workout-editor-actions";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "button";
+  saveBtn.textContent = "Save edits";
+  saveBtn.addEventListener("click", () => {
+    workout.name = nameInput.value.trim() || "Custom workout";
+    workout.day = dayInput.value.trim();
+    workout.exercises = parseExerciseLines(exArea.value);
+    saveWorkoutsToStorage();
+    renderWorkoutList();
+  });
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "button button-secondary";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", () => {
+    editor.remove();
+  });
+
+  actionRow.append(saveBtn, cancelBtn);
+  editor.append(nameField, dayField, exercisesField, actionRow);
+  container.appendChild(editor);
+}
+
+function deleteWorkout(id) {
+  workouts = workouts.filter((w) => w.id !== id);
+  saveWorkoutsToStorage();
+  renderWorkoutList();
 }
 
 /* ---------- Scenarios (full state) ---------- */
