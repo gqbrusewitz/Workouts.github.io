@@ -186,141 +186,34 @@
     <div class="tab-panel" id="workoutTab" role="tabpanel" hidden>
       <section class="cards-grid">
         <section class="card">
-          <h2>Weekly Training Flow</h2>
-          <p class="card-subtitle">
-            Build your week by adding saved workouts to the plan below.
-          </p>
-          <ul id="weekPlanList" class="workout-list"></ul>
-          <div class="helper-row">
-            <p class="helper-text" id="weekPlanHelper">
-              Nothing planned yet—add a workout to start your week.
-            </p>
-            <button id="clearWeekPlan" class="button button-secondary" type="button">
-              Clear week
-            </button>
-          </div>
-        </section>
-
-        <section class="card">
-          <h2>Custom Workouts</h2>
-          <p class="card-subtitle">Log simple workouts and reuse them in your plan.</p>
+          <h2>Build a Workout</h2>
+          <p class="card-subtitle">Start with a name, then stack exercises with weight, reps, and sets.</p>
 
           <div class="field">
             <label for="workoutName">Workout name</label>
-            <input id="workoutName" type="text" placeholder="e.g. Bench press" />
+            <input id="workoutName" type="text" placeholder="e.g. Push Day" />
           </div>
 
-          <div id="exerciseBuilder" class="exercise-builder">
-            <div class="field-grid exercise-grid">
-              <div class="field">
-                <label for="exerciseName">Exercise name</label>
-                <input
-                  id="exerciseName"
-                  class="exercise-name-input"
-                  type="text"
-                  placeholder="e.g. Bench press"
-                />
-              </div>
-              <div class="field">
-                <label for="exerciseWeight">Weight / load</label>
-                <input
-                  id="exerciseWeight"
-                  class="exercise-weight-input"
-                  type="text"
-                  placeholder="e.g. 135 lb"
-                />
-              </div>
-              <div class="field">
-                <label for="exerciseReps">Reps</label>
-                <input id="exerciseReps" class="exercise-reps-input" type="text" placeholder="e.g. 8" />
-              </div>
-              <div class="field">
-                <label for="exerciseSets">Sets</label>
-                <input id="exerciseSets" class="exercise-sets-input" type="text" placeholder="e.g. 4" />
-              </div>
-            </div>
+          <div id="exerciseRows" class="exercise-rows"></div>
 
-            <div class="helper-row helper-row--wrap">
-              <button id="addExerciseButton" class="button button-secondary add-exercise-button" type="button">
-                Add exercise
-              </button>
-              <p id="exerciseHelper" class="helper-text">
-                Fill in the fields and click “Add exercise” to build your list.
-              </p>
-            </div>
-
-            <ul id="exerciseDraftList" class="workout-exercises draft-exercise-list"></ul>
-
-            <div class="field">
-              <label for="workoutExercises">Exercises (auto-filled, edit anytime)</label>
-              <textarea
-                id="workoutExercises"
-                rows="4"
-                placeholder="Each exercise will appear here as you add it."
-              ></textarea>
-              <small class="helper-text">
-                We’ll keep this list in sync as you add exercises above, and you can still tweak the text manually.
-              </small>
-            </div>
+          <div class="helper-row helper-row--wrap">
+            <button id="addExerciseRow" class="button button-secondary" type="button">
+              Add exercise row
+            </button>
+            <p class="helper-text" id="workoutHelper">
+              Add at least one exercise name, then save the session.
+            </p>
           </div>
 
           <button id="saveWorkoutButton" class="button full-width-mobile" type="button">
             Save workout
           </button>
-          <p class="helper-text" id="workoutHelper">
-            Save a workout with all its exercises, then add it to your weekly training flow.
-          </p>
+        </section>
 
+        <section class="card">
+          <h2>Saved Workouts</h2>
+          <p class="card-subtitle">Every saved session keeps its exercises, weights, reps, and sets.</p>
           <ul id="workoutList" class="workout-list"></ul>
-        </section>
-
-        <section class="card">
-          <h2>Session Builder</h2>
-          <p class="card-subtitle">Pick one block from each row to craft today’s lift.</p>
-          <div class="session-grid">
-            <div>
-              <h3>Warm-up</h3>
-              <ul class="tag-list">
-                <li class="tag">5 min brisk walk</li>
-                <li class="tag">Hip airplanes</li>
-                <li class="tag">Scap push-ups</li>
-                <li class="tag">Glute bridge x12</li>
-              </ul>
-            </div>
-            <div>
-              <h3>Main lift</h3>
-              <ul class="tag-list">
-                <li class="tag">Squat 4×5</li>
-                <li class="tag">Bench 4×6</li>
-                <li class="tag">Deadlift 3×5</li>
-                <li class="tag">Overhead press 4×6</li>
-              </ul>
-            </div>
-            <div>
-              <h3>Accessories</h3>
-              <ul class="tag-list">
-                <li class="tag">Rows 3×10</li>
-                <li class="tag">Split squats 3×8</li>
-                <li class="tag">RDL 3×8</li>
-                <li class="tag">Face pulls 3×12</li>
-              </ul>
-            </div>
-            <div>
-              <h3>Finishers</h3>
-              <ul class="tag-list">
-                <li class="tag">Farmer carry 4×40 yd</li>
-                <li class="tag">Sled push 6×20 yd</li>
-                <li class="tag">10-min EMOM swing + push-up</li>
-                <li class="tag">Bike sprints 8×15s</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        <section class="card">
-          <h2>Cardio & Recovery</h2>
-          <p class="card-subtitle">Add your own cardio and recovery notes.</p>
-          <p class="helper-text">No suggestions here—customize this space for your plan.</p>
         </section>
       </section>
     </div>
